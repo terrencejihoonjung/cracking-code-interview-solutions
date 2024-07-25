@@ -8,8 +8,12 @@
     "test": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^20.14.12",
     "typescript": "^5.2.2",
     "vite": "^5.3.4",
     "vitest": "^2.0.4"
+  },
+  "dependencies": {
+    "perf_hooks": "^0.0.1"
   }
 }
