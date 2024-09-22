@@ -46,9 +46,7 @@ function inorderSuccessor(node: TreeNode | null): TreeNode | null {
     return findLeftMostNode(node!.right);
   }
 
-  bubbleToRoot(node!);
-
-  return node!.parent;
+  return bubbleUp(node!);
 }
 
 // Finds left most node of a BST given a root
@@ -61,10 +59,12 @@ function findLeftMostNode(node: TreeNode): TreeNode | null {
 }
 
 // Bubbles up to root node
-function bubbleToRoot(node: TreeNode): void {
+function bubbleUp(node: TreeNode): TreeNode | null {
   while (node!.parent && node === node!.parent.right) {
     node = node!.parent;
   }
+
+  return node.parent;
 }
 
 // Example usage:
