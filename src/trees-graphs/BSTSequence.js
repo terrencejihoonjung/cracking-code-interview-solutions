@@ -2,6 +2,10 @@
 A binary search tree was created by traversing through an array from left to right and inserting each element.
 Given a binary search tree with distinct elements, print all possible arrays that could have led to this tree.
 */
+/**
+ 
+
+ */
 var TreeNode = /** @class */ (function () {
     function TreeNode(val, left, right) {
         if (val === void 0) { val = 0; }
@@ -27,26 +31,28 @@ function allSequences(node) {
         for (var _a = 0, rightSequences_1 = rightSequences; _a < rightSequences_1.length; _a++) {
             var right = rightSequences_1[_a];
             var weaved = [];
-            weave(left, right, weaved, prefix);
+            weave(left, right, prefix, weaved);
             results.push.apply(results, weaved);
         }
     }
     return results;
 }
-function weave(first, second, weaved, prefix) {
+function weave(first, second, prefix, weaved) {
     if (first.length === 0 || second.length === 0) {
         var copy = prefix.concat(first).concat(second);
         weaved.push(copy);
         return;
     }
+    // remove from first
     var firstHead = first.shift();
     prefix.push(firstHead);
-    weave(first, second, weaved, prefix);
+    weave(first, second, prefix, weaved);
     first.unshift(firstHead);
     prefix.pop();
+    // remove from second
     var secondHead = second.shift();
     prefix.push(secondHead);
-    weave(first, second, weaved, prefix);
+    weave(first, second, prefix, weaved);
     second.unshift(secondHead);
     prefix.pop();
 }
