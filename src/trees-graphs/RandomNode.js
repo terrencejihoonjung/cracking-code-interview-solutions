@@ -11,16 +11,14 @@ Design and implement an algorithm for getRandomNode, and explain how you would i
 Hints: #42, #54, #62, #75, #89, #99, #112, #119
 */
 var TreeNode = /** @class */ (function () {
-    // size: number;
     function TreeNode(value) {
         this.val = value;
         this.left = null;
         this.right = null;
-        // this.size = 1;
+        this.size = 0;
     }
     return TreeNode;
 }());
-/* SLOW BUT WORKING */
 var BinarySearchTree = /** @class */ (function () {
     function BinarySearchTree() {
         this.root = null;
@@ -29,6 +27,7 @@ var BinarySearchTree = /** @class */ (function () {
         // first node to be inserted
         if (this.root === null) {
             this.root = new TreeNode(value);
+            this.root.size++;
             return;
         }
         // insert into non-empty BST
@@ -39,6 +38,7 @@ var BinarySearchTree = /** @class */ (function () {
             if (curr.val === value)
                 return; // duplicate found
             parent = curr;
+            curr.size++;
             if (value < curr.val) {
                 isLeftChild = true;
                 curr = curr.left;
@@ -48,10 +48,12 @@ var BinarySearchTree = /** @class */ (function () {
                 curr = curr.right;
             }
         }
+        var newNode = new TreeNode(value);
+        newNode.size++;
         if (isLeftChild)
-            parent.left = new TreeNode(value);
+            parent.left = newNode;
         else
-            parent.right = new TreeNode(value);
+            parent.right = newNode;
     };
     BinarySearchTree.prototype.find = function (value) {
         if (this.root === null)
@@ -70,20 +72,14 @@ var BinarySearchTree = /** @class */ (function () {
     BinarySearchTree.prototype.delete = function (value) {
         if (this.root === null)
             return false; // no node to delete
-        // replace root.val with min value of right subtree
-        // then, remove the min value node from right subtree
-        if (this.root.val === value) {
-            var minValue = this.getMin(this.root);
-            this.root.val = minValue;
-            this.removeMinNode(this.root);
-        }
+        if (this.find(value) === null)
+            return false;
         var parent = null;
         var curr = this.root;
         var isLeftChild = true;
-        while (curr !== null) {
-            if (curr.val === value)
-                break;
+        while (curr !== null && curr.val !== value) {
             parent = curr;
+            curr.size--;
             if (value < curr.val) {
                 isLeftChild = true;
                 curr = curr.left;
@@ -93,228 +89,121 @@ var BinarySearchTree = /** @class */ (function () {
                 curr = curr.right;
             }
         }
-        if (curr === null)
-            return false; // node not found
-        // check if node to delete has 0 children 1 child, or 2 children
+        // Node found, now delete it
         if (curr.left === null && curr.right === null) {
-            if (isLeftChild)
+            // Case 1: Node to delete has no children
+            if (parent === null) {
+                this.root = null;
+            }
+            else if (isLeftChild) {
                 parent.left = null;
+            }
             else {
                 parent.right = null;
             }
         }
-        else if (curr.left !== null && curr.right === null) {
-            if (isLeftChild)
-                parent.left = curr.left;
-            else
-                parent.right = curr.left;
-        }
-        else if (curr.left === null && curr.right !== null) {
-            if (isLeftChild)
+        else if (curr.left === null) {
+            // Case 2: Node to delete has only right child
+            if (parent === null) {
+                this.root = curr.right;
+            }
+            else if (isLeftChild) {
                 parent.left = curr.right;
-            else
+            }
+            else {
                 parent.right = curr.right;
+            }
         }
-        // both children are not null
+        else if (curr.right === null) {
+            // Case 3: Node to delete has only left child
+            if (parent === null) {
+                this.root = curr.left;
+            }
+            else if (isLeftChild) {
+                parent.left = curr.left;
+            }
+            else {
+                parent.right = curr.left;
+            }
+        }
         else {
-            var min = this.getMin(curr.right);
-            curr.val = min;
-            this.removeMinNode(curr.right);
+            // Case 4: Node to delete has both children
+            var successor = this.findMin(curr.right);
+            curr.val = successor.val;
+            curr.right = this.deleteMin(curr.right);
         }
         return true;
     };
-    BinarySearchTree.prototype.getMin = function (node) {
-        if (node.left === null)
-            return node.val;
-        return this.getMin(node.left);
+    BinarySearchTree.prototype.findMin = function (node) {
+        while (node.left !== null)
+            node = node.left;
+        return node;
     };
-    BinarySearchTree.prototype.removeMinNode = function (node) {
-        var parent = null;
-        var curr = node;
-        while (curr !== null && curr.left !== null) {
-            parent = curr;
-            curr = curr.left;
-        }
-        // we can safely remove node
-        if (curr.right === null)
-            parent.left = null;
-        // recursively reorder tree
-        else {
-            var minVal = this.getMin(curr.right);
-            curr.val = minVal;
-            this.removeMinNode(curr.right);
-        }
+    BinarySearchTree.prototype.deleteMin = function (node) {
+        if (node.left === null)
+            return node.right;
+        node.left = this.deleteMin(node.left);
+        node.size =
+            1 + (node.left ? node.left.size : 0) + (node.right ? node.right.size : 0);
+        return node;
     };
     BinarySearchTree.prototype.getRandomNode = function () {
+        var _a, _b;
         if (this.root === null)
             return null; // BST is empty
-        // get all nodes
-        var nodes = [];
-        this.convertTreeToList(this.root, nodes);
-        // using nodes.length, randomly pick an index and return that node
-        var len = nodes.length;
-        var randomIndex = Math.floor(Math.random() * len);
-        return nodes[randomIndex];
-    };
-    BinarySearchTree.prototype.convertTreeToList = function (node, list) {
-        if (node === null)
-            return;
-        list.push(node);
-        this.convertTreeToList(node.left, list);
-        this.convertTreeToList(node.right, list);
+        var curr = this.root;
+        while (true) {
+            var randomSize = Math.floor(Math.random() * curr.size);
+            var leftSize = (_b = (_a = curr.left) === null || _a === void 0 ? void 0 : _a.size) !== null && _b !== void 0 ? _b : 0;
+            if (randomSize < leftSize)
+                curr = curr.left;
+            else if (randomSize === leftSize)
+                return curr;
+            else
+                curr = curr.right;
+        }
     };
     return BinarySearchTree;
 }());
-/* FAST AND WORKING */
-// class BinarySearchTree {
-//   root: TreeNode | null;
-//   constructor() {
-//     this.root = null;
-//   }
-//   insert(value: number): void {
-//     // if root null, we insert first node
-//     if (this.root === null) {
-//       this.root = new TreeNode(value);
-//       return;
-//     }
-//     // else, we traverse and insert
-//     let curr: TreeNode | null = this.root;
-//     let parent: TreeNode | null = null;
-//     while (curr !== null) {
-//       curr.size++;
-//       parent = curr;
-//       if (value === curr.val) {
-//         const randomDirection = Math.round(Math.random());
-//         if (randomDirection === 0) curr = curr.left;
-//         else if (randomDirection === 1) curr = curr.right;
-//       } else if (value < curr.val) curr = curr.left;
-//       else curr = curr.right;
-//     }
-//     const newNode = new TreeNode(value);
-//     if (value < parent!.val) parent!.left = newNode;
-//     else {
-//       parent!.right = newNode;
-//     }
-//   }
-//   find(value: number): TreeNode | null {
-//     let curr: TreeNode | null = this.root;
-//     while (curr !== null) {
-//       if (curr.val === value) return curr;
-//       else if (value < curr.val) curr = curr.left;
-//       else curr = curr.right;
-//     }
-//     return null;
-//   }
-//   delete(value: number): boolean {
-//     // no node to delete
-//     if (!this.root) return false;
-//     let current: TreeNode | null = this.root;
-//     let parent: TreeNode | null = null;
-//     let isLeftChild = true;
-//     // find the node to delete (curr)
-//     while (current && current.val !== value) {
-//       parent = current;
-//       if (value < current.val) {
-//         isLeftChild = true;
-//         current = current.left;
-//       } else {
-//         isLeftChild = false;
-//         current = current.right;
-//       }
-//     }
-//     if (!current) return false; // no node to delete
-//     // Case 1: Node to be deleted has no children
-//     if (current.left === null && current.right === null) {
-//       if (current === this.root) {
-//         this.root = null;
-//       } else if (isLeftChild) {
-//         parent!.left = null;
-//       } else {
-//         parent!.right = null;
-//       }
-//     }
-//     // Case 2: Node to be deleted has only one child
-//     else if (current.right === null) {
-//       if (isLeftChild) parent!.left = current.left;
-//       else parent!.right = current.left;
-//     } else if (current.left === null) {
-//       if (isLeftChild) parent!.left = current.right;
-//       else parent!.right = current.right;
-//     }
-//     // Case 3: Node to be deleted has two children
-//     else {
-//       let successor = this.findMinNode(current.right);
-//       if (current === this.root) {
-//         this.root = successor;
-//       } else if (isLeftChild) {
-//         parent!.left = successor;
-//       } else {
-//         parent!.right = successor;
-//       }
-//       successor.left = current.left;
-//       if (successor !== current.right) {
-//         this.findParent(current.right, successor.val)!.left = successor.right;
-//         successor.right = current.right;
-//       }
-//     }
-//     // Update sizes along the path
-//     this.updateSizes(this.root, value);
-//     return true;
-//   }
-//   private findMinNode(node: TreeNode): TreeNode {
-//     while (node.left !== null) {
-//       node = node.left;
-//     }
-//     return node;
-//   }
-//   private findParent(node: TreeNode, value: number): TreeNode | null {
-//     if (node.left?.val === value || node.right?.val === value) return node;
-//     if (value < node.val) return this.findParent(node.left!, value);
-//     return this.findParent(node.right!, value);
-//   }
-//   private updateSizes(node: TreeNode | null, value: number): void {
-//     if (node === null) return;
-//     if (node.val !== value) node.size--;
-//     if (value < node.val) this.updateSizes(node.left, value);
-//     else if (value > node.val) this.updateSizes(node.right, value);
-//   }
-//   getRandomNode(): TreeNode | null {
-//     if (this.root === null) return null;
-//     // generate random size from 1 to size
-//     let random = Math.floor(Math.random() * this.root.size) + 1;
-//     // perform binary search to find node with size === random size
-//     // if size < random size, go left, else if size < random size, go right
-//     let curr: TreeNode | null = this.root;
-//     while (curr !== null) {
-//       if (!curr.left) {
-//         if (random === 1) return curr;
-//         curr = curr.right;
-//         random--;
-//       } else if (random <= curr.left.size) {
-//         curr = curr.left;
-//       } else {
-//         random -= curr.left.size + 1;
-//         curr = curr.right;
-//       }
-//     }
-//     return null;
-//   }
-// }
 function test() {
-    var _a, _b, _c, _d, _e;
+    var _a;
     var tree = new BinarySearchTree();
-    tree.insert(20);
-    tree.insert(10);
-    tree.insert(30);
-    tree.insert(5);
-    tree.insert(15);
-    tree.insert(25);
-    tree.insert(35);
-    console.log("Random node:", (_a = tree.getRandomNode()) === null || _a === void 0 ? void 0 : _a.val);
-    console.log("Random node:", (_b = tree.getRandomNode()) === null || _b === void 0 ? void 0 : _b.val);
-    console.log("Random node:", (_c = tree.getRandomNode()) === null || _c === void 0 ? void 0 : _c.val);
-    console.log("Finding 15:", (_d = tree.find(15)) === null || _d === void 0 ? void 0 : _d.val);
-    tree.delete(15);
-    console.log("After deleting 15, finding 15:", (_e = tree.find(15)) === null || _e === void 0 ? void 0 : _e.val);
+    console.log("Inserting nodes...");
+    [20, 10, 30, 5, 15, 25, 35].forEach(function (val) {
+        var _a;
+        tree.insert(val);
+        console.log("Inserted ".concat(val, ", root size: ").concat((_a = tree.root) === null || _a === void 0 ? void 0 : _a.size));
+    });
+    console.log("\nTree structure after insertions:");
+    printTree(tree.root);
+    console.log("\nTesting random node selection:");
+    for (var i = 0; i < 5; i++) {
+        console.log("Random node: ".concat((_a = tree.getRandomNode()) === null || _a === void 0 ? void 0 : _a.val));
+    }
+    console.log("\nTesting find method:");
+    [15, 25, 40].forEach(function (val) {
+        var _a, _b;
+        console.log("Finding ".concat(val, ": ").concat((_b = (_a = tree.find(val)) === null || _a === void 0 ? void 0 : _a.val) !== null && _b !== void 0 ? _b : "Not found"));
+    });
+    console.log("\nTesting delete method:");
+    [15, 30, 20].forEach(function (val) {
+        var _a;
+        console.log("Deleting ".concat(val));
+        tree.delete(val);
+        console.log("Tree structure after deletion:");
+        printTree(tree.root);
+        console.log("Root size after deletion: ".concat((_a = tree.root) === null || _a === void 0 ? void 0 : _a.size));
+    });
+    console.log("\nFinal tree structure:");
+    printTree(tree.root);
+}
+function printTree(node, prefix, isLeft) {
+    if (prefix === void 0) { prefix = ""; }
+    if (isLeft === void 0) { isLeft = true; }
+    if (node === null)
+        return;
+    console.log("".concat(prefix).concat(isLeft ? "├── " : "└── ").concat(node.val, " (size: ").concat(node.size, ")"));
+    printTree(node.left, "".concat(prefix).concat(isLeft ? "│   " : "    "), true);
+    printTree(node.right, "".concat(prefix).concat(isLeft ? "│   " : "    "), false);
 }
 test();

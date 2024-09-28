@@ -15,17 +15,16 @@ class TreeNode {
   val: number;
   left: TreeNode | null;
   right: TreeNode | null;
-  // size: number;
+  size: number;
 
   constructor(value: number) {
     this.val = value;
     this.left = null;
     this.right = null;
-    // this.size = 1;
+    this.size = 0;
   }
 }
 
-/* SLOW BUT WORKING */
 class BinarySearchTree {
   root: TreeNode | null;
 
@@ -37,6 +36,7 @@ class BinarySearchTree {
     // first node to be inserted
     if (this.root === null) {
       this.root = new TreeNode(value);
+      this.root.size++;
       return;
     }
 
@@ -49,6 +49,7 @@ class BinarySearchTree {
       if (curr.val === value) return; // duplicate found
 
       parent = curr;
+      curr.size++;
 
       if (value < curr.val) {
         isLeftChild = true;
@@ -59,8 +60,11 @@ class BinarySearchTree {
       }
     }
 
-    if (isLeftChild) parent!.left = new TreeNode(value);
-    else parent!.right = new TreeNode(value);
+    const newNode = new TreeNode(value);
+    newNode.size++;
+
+    if (isLeftChild) parent!.left = newNode;
+    else parent!.right = newNode;
   }
 
   find(value: number): TreeNode | null {
@@ -78,23 +82,15 @@ class BinarySearchTree {
 
   delete(value: number): boolean {
     if (this.root === null) return false; // no node to delete
-
-    // replace root.val with min value of right subtree
-    // then, remove the min value node from right subtree
-    if (this.root.val === value) {
-      const minValue = this.getMin(this.root);
-      this.root.val = minValue;
-      this.removeMinNode(this.root);
-    }
+    if (this.find(value) === null) return false;
 
     let parent: TreeNode | null = null;
     let curr: TreeNode | null = this.root;
     let isLeftChild: boolean = true;
 
-    while (curr !== null) {
-      if (curr.val === value) break;
-
+    while (curr !== null && curr.val !== value) {
       parent = curr;
+      curr.size--;
       if (value < curr.val) {
         isLeftChild = true;
         curr = curr.left;
@@ -104,259 +100,118 @@ class BinarySearchTree {
       }
     }
 
-    if (curr === null) return false; // node not found
-
-    // check if node to delete has 0 children 1 child, or 2 children
-    if (curr.left === null && curr.right === null) {
-      if (isLeftChild) parent!.left = null;
-      else {
-        parent!.right = null;
+    // Node found, now delete it
+    if (curr!.left === null && curr!.right === null) {
+      // Case 1: Node to delete has no children
+      if (parent === null) {
+        this.root = null;
+      } else if (isLeftChild) {
+        parent.left = null;
+      } else {
+        parent.right = null;
       }
-    } else if (curr.left !== null && curr.right === null) {
-      if (isLeftChild) parent!.left = curr.left;
-      else parent!.right = curr.left;
-    } else if (curr.left === null && curr.right !== null) {
-      if (isLeftChild) parent!.left = curr.right;
-      else parent!.right = curr.right;
-    }
-
-    // both children are not null
-    else {
-      const min = this.getMin(curr.right!);
-      curr.val = min;
-      this.removeMinNode(curr.right!);
+    } else if (curr!.left === null) {
+      // Case 2: Node to delete has only right child
+      if (parent === null) {
+        this.root = curr!.right;
+      } else if (isLeftChild) {
+        parent.left = curr!.right;
+      } else {
+        parent.right = curr!.right;
+      }
+    } else if (curr!.right === null) {
+      // Case 3: Node to delete has only left child
+      if (parent === null) {
+        this.root = curr!.left;
+      } else if (isLeftChild) {
+        parent.left = curr!.left;
+      } else {
+        parent.right = curr!.left;
+      }
+    } else {
+      // Case 4: Node to delete has both children
+      const successor = this.findMin(curr!.right);
+      curr!.val = successor.val;
+      curr!.right = this.deleteMin(curr!.right);
     }
 
     return true;
   }
 
-  public getMin(node: TreeNode): number {
-    if (node.left === null) return node.val;
-    return this.getMin(node.left);
+  private findMin(node: TreeNode): TreeNode {
+    while (node.left !== null) node = node.left;
+    return node;
   }
 
-  public removeMinNode(node: TreeNode): void {
-    let parent: TreeNode | null = null;
-    let curr: TreeNode | null = node;
-
-    while (curr !== null && curr.left !== null) {
-      parent = curr;
-      curr = curr.left;
-    }
-
-    // we can safely remove node
-    if (curr.right === null) parent!.left = null;
-    // recursively reorder tree
-    else {
-      const minVal = this.getMin(curr.right);
-      curr.val = minVal;
-      this.removeMinNode(curr.right);
-    }
+  private deleteMin(node: TreeNode): TreeNode | null {
+    if (node.left === null) return node.right;
+    node.left = this.deleteMin(node.left);
+    node.size =
+      1 + (node.left ? node.left.size : 0) + (node.right ? node.right.size : 0);
+    return node;
   }
 
   getRandomNode(): TreeNode | null {
     if (this.root === null) return null; // BST is empty
 
-    // get all nodes
-    const nodes: TreeNode[] = [];
-    this.convertTreeToList(this.root, nodes);
+    let curr: TreeNode = this.root;
 
-    // using nodes.length, randomly pick an index and return that node
-    const len = nodes.length;
-    let randomIndex = Math.floor(Math.random() * len);
-    return nodes[randomIndex];
-  }
+    while (true) {
+      const randomSize = Math.floor(Math.random() * curr.size);
 
-  convertTreeToList(node: TreeNode, list: TreeNode[]): void {
-    if (node === null) return;
+      let leftSize = curr.left?.size ?? 0;
 
-    list.push(node);
-
-    this.convertTreeToList(node.left!, list);
-    this.convertTreeToList(node.right!, list);
+      if (randomSize < leftSize) curr = curr.left!;
+      else if (randomSize === leftSize) return curr;
+      else curr = curr.right!;
+    }
   }
 }
 
-/* FAST AND WORKING */
-// class BinarySearchTree {
-//   root: TreeNode | null;
-
-//   constructor() {
-//     this.root = null;
-//   }
-
-//   insert(value: number): void {
-//     // if root null, we insert first node
-//     if (this.root === null) {
-//       this.root = new TreeNode(value);
-//       return;
-//     }
-
-//     // else, we traverse and insert
-//     let curr: TreeNode | null = this.root;
-//     let parent: TreeNode | null = null;
-
-//     while (curr !== null) {
-//       curr.size++;
-//       parent = curr;
-
-//       if (value === curr.val) {
-//         const randomDirection = Math.round(Math.random());
-//         if (randomDirection === 0) curr = curr.left;
-//         else if (randomDirection === 1) curr = curr.right;
-//       } else if (value < curr.val) curr = curr.left;
-//       else curr = curr.right;
-//     }
-
-//     const newNode = new TreeNode(value);
-//     if (value < parent!.val) parent!.left = newNode;
-//     else {
-//       parent!.right = newNode;
-//     }
-//   }
-
-//   find(value: number): TreeNode | null {
-//     let curr: TreeNode | null = this.root;
-
-//     while (curr !== null) {
-//       if (curr.val === value) return curr;
-//       else if (value < curr.val) curr = curr.left;
-//       else curr = curr.right;
-//     }
-
-//     return null;
-//   }
-
-//   delete(value: number): boolean {
-//     // no node to delete
-//     if (!this.root) return false;
-
-//     let current: TreeNode | null = this.root;
-//     let parent: TreeNode | null = null;
-//     let isLeftChild = true;
-
-//     // find the node to delete (curr)
-//     while (current && current.val !== value) {
-//       parent = current;
-//       if (value < current.val) {
-//         isLeftChild = true;
-//         current = current.left;
-//       } else {
-//         isLeftChild = false;
-//         current = current.right;
-//       }
-//     }
-
-//     if (!current) return false; // no node to delete
-
-//     // Case 1: Node to be deleted has no children
-//     if (current.left === null && current.right === null) {
-//       if (current === this.root) {
-//         this.root = null;
-//       } else if (isLeftChild) {
-//         parent!.left = null;
-//       } else {
-//         parent!.right = null;
-//       }
-//     }
-
-//     // Case 2: Node to be deleted has only one child
-//     else if (current.right === null) {
-//       if (isLeftChild) parent!.left = current.left;
-//       else parent!.right = current.left;
-//     } else if (current.left === null) {
-//       if (isLeftChild) parent!.left = current.right;
-//       else parent!.right = current.right;
-//     }
-
-//     // Case 3: Node to be deleted has two children
-//     else {
-//       let successor = this.findMinNode(current.right);
-//       if (current === this.root) {
-//         this.root = successor;
-//       } else if (isLeftChild) {
-//         parent!.left = successor;
-//       } else {
-//         parent!.right = successor;
-//       }
-
-//       successor.left = current.left;
-//       if (successor !== current.right) {
-//         this.findParent(current.right, successor.val)!.left = successor.right;
-//         successor.right = current.right;
-//       }
-//     }
-
-//     // Update sizes along the path
-//     this.updateSizes(this.root, value);
-
-//     return true;
-//   }
-
-//   private findMinNode(node: TreeNode): TreeNode {
-//     while (node.left !== null) {
-//       node = node.left;
-//     }
-//     return node;
-//   }
-
-//   private findParent(node: TreeNode, value: number): TreeNode | null {
-//     if (node.left?.val === value || node.right?.val === value) return node;
-//     if (value < node.val) return this.findParent(node.left!, value);
-//     return this.findParent(node.right!, value);
-//   }
-
-//   private updateSizes(node: TreeNode | null, value: number): void {
-//     if (node === null) return;
-//     if (node.val !== value) node.size--;
-//     if (value < node.val) this.updateSizes(node.left, value);
-//     else if (value > node.val) this.updateSizes(node.right, value);
-//   }
-
-//   getRandomNode(): TreeNode | null {
-//     if (this.root === null) return null;
-
-//     // generate random size from 1 to size
-//     let random = Math.floor(Math.random() * this.root.size) + 1;
-
-//     // perform binary search to find node with size === random size
-//     // if size < random size, go left, else if size < random size, go right
-//     let curr: TreeNode | null = this.root;
-//     while (curr !== null) {
-//       if (!curr.left) {
-//         if (random === 1) return curr;
-//         curr = curr.right;
-//         random--;
-//       } else if (random <= curr.left.size) {
-//         curr = curr.left;
-//       } else {
-//         random -= curr.left.size + 1;
-//         curr = curr.right;
-//       }
-//     }
-
-//     return null;
-//   }
-// }
-
 function test() {
   const tree = new BinarySearchTree();
-  tree.insert(20);
-  tree.insert(10);
-  tree.insert(30);
-  tree.insert(5);
-  tree.insert(15);
-  tree.insert(25);
-  tree.insert(35);
 
-  console.log("Random node:", tree.getRandomNode()?.val);
-  console.log("Random node:", tree.getRandomNode()?.val);
-  console.log("Random node:", tree.getRandomNode()?.val);
+  console.log("Inserting nodes...");
+  [20, 10, 30, 5, 15, 25, 35].forEach((val) => {
+    tree.insert(val);
+    console.log(`Inserted ${val}, root size: ${tree.root?.size}`);
+  });
 
-  console.log("Finding 15:", tree.find(15)?.val);
+  console.log("\nTree structure after insertions:");
+  printTree(tree.root);
 
-  tree.delete(15);
-  console.log("After deleting 15, finding 15:", tree.find(15)?.val);
+  console.log("\nTesting random node selection:");
+  for (let i = 0; i < 5; i++) {
+    console.log(`Random node: ${tree.getRandomNode()?.val}`);
+  }
+
+  console.log("\nTesting find method:");
+  [15, 25, 40].forEach((val) => {
+    console.log(`Finding ${val}: ${tree.find(val)?.val ?? "Not found"}`);
+  });
+
+  console.log("\nTesting delete method:");
+  [15, 30, 20].forEach((val) => {
+    console.log(`Deleting ${val}`);
+    tree.delete(val);
+    console.log("Tree structure after deletion:");
+    printTree(tree.root);
+    console.log(`Root size after deletion: ${tree.root?.size}`);
+  });
+
+  console.log("\nFinal tree structure:");
+  printTree(tree.root);
+}
+
+function printTree(node: TreeNode | null, prefix = "", isLeft = true) {
+  if (node === null) return;
+
+  console.log(
+    `${prefix}${isLeft ? "├── " : "└── "}${node.val} (size: ${node.size})`
+  );
+
+  printTree(node.left, `${prefix}${isLeft ? "│   " : "    "}`, true);
+  printTree(node.right, `${prefix}${isLeft ? "│   " : "    "}`, false);
 }
 
 test();
